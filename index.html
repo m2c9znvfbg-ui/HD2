@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>HDモード透析シミュレーター（折れ線グラフ）</title>
+<title>HDモード透析シミュレーター（修正版）</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
@@ -15,7 +15,7 @@ input, select { padding: 5px; margin-top: 5px; width: 150px; }
 </style>
 </head>
 <body>
-<h1>HDモード透析シミュレーター</h1>
+<h1>HDモード透析シミュレーター（修正版）</h1>
 
 <label>性別:
 <select id="gender">
@@ -114,7 +114,8 @@ function calculate() {
   const KoA = dialyzers[dialyzerName].KoA;
 
   const K = (qb * qd * KoA) / (qb*qd + KoA*(qb+qd));
-  const ktv = K * time / V / 1000;
+  // 修正版：時間を分に変換
+  const ktv = K * time * 60 / V / 1000;
 
   const diff = ktv - spKtV;
 
