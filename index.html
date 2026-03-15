@@ -1,104 +1,34 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Kt/Vシミュレーター</title>
-
+<title>Kt/V & spKt/V 予測シミュレーター</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-
-body{
-font-family:Arial;
-background:#f4f6f9;
-margin:20px;
-}
-
-.container{
-max-width:800px;
-margin:auto;
-background:white;
-padding:30px;
-border-radius:10px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
-
-h1{
-text-align:center;
-}
-
-.input-group{
-margin-bottom:15px;
-}
-
-label{
-font-weight:bold;
-}
-
-input,select{
-width:100%;
-padding:8px;
-margin-top:5px;
-}
-
-.slider{
-width:100%;
-}
-
-.result{
-margin-top:20px;
-background:#eef3ff;
-padding:20px;
-border-radius:8px;
-}
-
-.good{
-color:green;
-font-weight:bold;
-}
-
-.bad{
-color:red;
-font-weight:bold;
-}
-
-canvas{
-margin-top:30px;
-}
-
-.small{
-font-size:12px;
-color:#666;
-}
-
+body{font-family:Arial;background:#f4f6f9;margin:20px;}
+.container{max-width:900px;margin:auto;background:white;padding:30px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
+h1{text-align:center;}
+.input-group{margin-bottom:15px;}
+label{font-weight:bold;}
+input,select{width:100%;padding:8px;margin-top:5px;}
+.slider{width:100%;}
+.result{margin-top:20px;background:#eef3ff;padding:20px;border-radius:8px;}
+.good{color:green;font-weight:bold;}
+.bad{color:red;font-weight:bold;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:5px;text-align:center;}
+canvas{margin-top:30px;}
+.small{font-size:12px;color:#666;}
 </style>
-
 </head>
-
 <body>
-
 <div class="container">
-
-<h1>透析Kt/Vシミュレーター</h1>
+<h1>Kt/V & spKt/V 予測シミュレーター</h1>
 
 <div class="input-group">
 <label>体重 (kg)</label>
 <input type="number" id="weight" value="60">
-</div>
-
-<div class="input-group">
-<label>QB (mL/min)</label>
-<input type="range" min="100" max="350" step="10" value="200" id="qb">
-<div>QB: <span id="qb_value">200</span></div>
-</div>
-
-<div class="input-group">
-<label>QD (mL/min)</label>
-<input type="range" min="300" max="800" step="50" value="500" id="qd">
-<div>QD: <span id="qd_value">500</span></div>
 </div>
 
 <div class="input-group">
@@ -107,162 +37,155 @@ color:#666;
 </div>
 
 <div class="input-group">
+<label>ダイアライザ</label>
+<select id="dialyzer">
+<option value="700">APS15 (KoA 700)</option>
+<option value="900">APS18 (KoA 900)</option>
+<option value="1100">NV21 (KoA 1100)</option>
+<option value="1200">FB170 (KoA 1200)</option>
+</select>
+</div>
+
+<div class="input-group">
+<label>QB (mL/min)</label>
+<input type="range" min="100" max="350" step="10" value="200" id="qb" class="slider">
+<div>QB: <span id="qb_value">200</span></div>
+</div>
+
+<div class="input-group">
+<label>QD (mL/min)</label>
+<input type="range" min="300" max="800" step="50" value="500" id="qd" class="slider">
+<div>QD: <span id="qd_value">500</span></div>
+</div>
+
+<div class="input-group">
 <label>UF量 (L)</label>
 <input type="number" id="uf" value="2">
 </div>
 
 <div class="input-group">
-<label>BUN前</label>
+<label>BUN 前</label>
 <input type="number" id="bun_pre" value="60">
 </div>
 
 <div class="input-group">
-<label>BUN後</label>
+<label>BUN 後</label>
 <input type="number" id="bun_post" value="20">
 </div>
 
 <div class="result">
+<p>理論クリアランス K: <span id="K">-</span> mL/min</p>
+<p>予測Kt/V: <span id="ktv">-</span></p>
+<p>spKt/V: <span id="spktv">-</span></p>
+<p>Kt/V評価: <span id="evaluation">-</span></p>
 
-<p>理論Kt/V : <span id="ktv_pred">-</span></p>
-
-<p>spKt/V : <span id="spktv">-</span></p>
-
-<p>Kt/V評価 : <span id="evaluation">-</span></p>
-
+<h3>ダイアライザ別予測Kt/V比較</h3>
+<table>
+<thead><tr><th>ダイアライザ</th><th>KoA</th><th>予測Kt/V</th></tr></thead>
+<tbody id="dialyzer_table"></tbody>
+</table>
 </div>
 
-<canvas id="ktvChart"></canvas>
+<canvas id="ktvChart" height="250"></canvas>
 
-<p class="small">
-教育・研究用ツール
-</p>
-
+<p class="small">※教育・研究用です。臨床判断には使用しないでください。</p>
 </div>
 
 <script>
+const dialyzers=[
+  {name:"APS15", koa:700},
+  {name:"APS18", koa:900},
+  {name:"NV21", koa:1100},
+  {name:"FB170", koa:1200}
+];
 
 let chart;
 
-function calculate(){
+function calcKtV(K,time,V){ return (K*time*60)/(V*1000); }
 
-let weight=parseFloat(document.getElementById("weight").value);
-let qb=parseFloat(document.getElementById("qb").value);
-let qd=parseFloat(document.getElementById("qd").value);
-let time=parseFloat(document.getElementById("time").value);
-let uf=parseFloat(document.getElementById("uf").value);
-
-let bun_pre=parseFloat(document.getElementById("bun_pre").value);
-let bun_post=parseFloat(document.getElementById("bun_post").value);
-
-let koa=900;
-
-let V=0.6*weight;
-
-let K=(qb*qd*koa)/((qb*qd)+(koa*(qb+qd)));
-
-let ktv_pred=(K*time*60)/(V*1000);
-
-let R=bun_post/bun_pre;
-
-let spktv=-Math.log(R-0.008*time)+(4-3.5*R)*(uf/weight);
-
-document.getElementById("ktv_pred").innerText=ktv_pred.toFixed(2);
-
-document.getElementById("spktv").innerText=spktv.toFixed(2);
-
-let eval_text;
-
-if(spktv>=1.2){
-
-eval_text="達成";
-
-document.getElementById("evaluation").className="good";
-
-}else{
-
-eval_text="不足";
-
-document.getElementById("evaluation").className="bad";
-
+function calcSPKtV(bun_pre,bun_post,time,uf,weight){
+  let R=bun_post/bun_pre;
+  return -Math.log(R-0.008*time)+(4-3.5*R)*(uf/weight);
 }
 
-document.getElementById("evaluation").innerText=eval_text;
+function update(){
+  let weight=parseFloat(document.getElementById("weight").value);
+  let time=parseFloat(document.getElementById("time").value);
+  let qb=parseFloat(document.getElementById("qb").value);
+  let qd=parseFloat(document.getElementById("qd").value);
+  let koa=parseFloat(document.getElementById("dialyzer").value);
+  let uf=parseFloat(document.getElementById("uf").value);
+  let bun_pre=parseFloat(document.getElementById("bun_pre").value);
+  let bun_post=parseFloat(document.getElementById("bun_post").value);
 
-drawGraph(weight,qd,time);
+  let V=0.6*weight;
+  let K=(qb*qd*koa)/((qb*qd)+(koa*(qb+qd)));
+  let ktv=calcKtV(K,time,V);
+  let spktv=calcSPKtV(bun_pre,bun_post,time,uf,weight);
 
+  document.getElementById("K").innerText=K.toFixed(1);
+  document.getElementById("ktv").innerText=ktv.toFixed(2);
+  document.getElementById("spktv").innerText=spktv.toFixed(2);
+
+  let eval_text=spktv>=1.2?"達成":"不足";
+  document.getElementById("evaluation").innerText=eval_text;
+  document.getElementById("evaluation").className=spktv>=1.2?"good":"bad";
+
+  // ダイアライザ別比較
+  let tbody=document.getElementById("dialyzer_table");
+  tbody.innerHTML="";
+  dialyzers.forEach(d=>{
+    let k=(qb*qd*d.koa)/((qb*qd)+(d.koa*(qb+qd)));
+    let ktv_d=calcKtV(k,time,V);
+    let tr=document.createElement("tr");
+    tr.innerHTML=`<td>${d.name}</td><td>${d.koa}</td><td>${ktv_d.toFixed(2)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  drawGraph(weight,time,qd,koa,uf,bun_pre,bun_post);
 }
 
-function drawGraph(weight,qd,time){
-
-let koa=900;
-
-let qb_values=[];
-
-let ktv_values=[];
-
-let V=0.6*weight;
-
-for(let qb=100; qb<=350; qb+=10){
-
-let K=(qb*qd*koa)/((qb*qd)+(koa*(qb+qd)));
-
-let ktv=(K*time*60)/(V*1000);
-
-qb_values.push(qb);
-
-ktv_values.push(ktv.toFixed(2));
-
+function drawGraph(weight,time,qd,koa,uf,bun_pre,bun_post){
+  let qb_values=[], ktv_values=[], spktv_values=[];
+  let V=0.6*weight;
+  for(let q=100;q<=350;q+=10){
+    let K=(q*qd*koa)/((q*qd)+(koa*(q+qd)));
+    qb_values.push(q);
+    ktv_values.push(calcKtV(K,time,V).toFixed(2));
+    spktv_values.push(calcSPKtV(bun_pre,bun_post,time,uf,weight).toFixed(2));
+  }
+  if(chart) chart.destroy();
+  let ctx=document.getElementById("ktvChart");
+  chart=new Chart(ctx,{
+    type:"line",
+    data:{
+      labels:qb_values,
+      datasets:[
+        {label:"理論Kt/V", data:ktv_values, borderColor:"blue", borderWidth:2, fill:false},
+        {label:"spKt/V", data:spktv_values, borderColor:"green", borderWidth:2, fill:false}
+      ]
+    },
+    options:{responsive:true, scales:{y:{beginAtZero:true}}}
+  });
 }
 
-if(chart){
-
-chart.destroy();
-
-}
-
-let ctx=document.getElementById("ktvChart");
-
-chart=new Chart(ctx,{
-
-type:"line",
-
-data:{
-
-labels:qb_values,
-
-datasets:[{
-
-label:"QB vs Kt/V",
-
-data:ktv_values,
-
-borderWidth:2
-
-}]
-
-}
-
-});
-
-}
-
-document.querySelectorAll("input").forEach(el=>{
-el.addEventListener("input",calculate);
-});
-
+// イベント
 document.getElementById("qb").oninput=function(){
-document.getElementById("qb_value").innerText=this.value;
-calculate();
-}
-
+  document.getElementById("qb_value").innerText=this.value;
+  update();
+};
 document.getElementById("qd").oninput=function(){
-document.getElementById("qd_value").innerText=this.value;
-calculate();
-}
+  document.getElementById("qd_value").innerText=this.value;
+  update();
+};
+document.getElementById("weight").oninput=update;
+document.getElementById("time").oninput=update;
+document.getElementById("dialyzer").onchange=update;
+document.getElementById("uf").oninput=update;
+document.getElementById("bun_pre").oninput=update;
+document.getElementById("bun_post").oninput=update;
 
-calculate();
-
+update();
 </script>
-
 </body>
 </html>
