@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>透析Kt/Vシミュレーター</title>
+
+<style>
+
+body{
+font-family: Arial;
+background:#f4f6f9;
+margin:20px;
+}
+
+.container{
+max-width:700px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+h1{
+text-align:center;
+margin-bottom:25px;
+}
+
+.input-group{
+margin-bottom:18px;
+}
+
+label{
+font-weight:bold;
+}
+
+input,select{
+width:100%;
+padding:8px;
+margin-top:5px;
+}
+
+.slider{
+width:100%;
+}
+
+.value-display{
+font-size:14px;
+color:#333;
+}
+
+.result{
+margin-top:25px;
+background:#eef3ff;
+padding:20px;
+border-radius:8px;
+}
+
+.good{
+color:green;
+font-weight:bold;
+}
+
+.bad{
+color:red;
+font-weight:bold;
+}
+
+.disclaimer{
+margin-top:25px;
+font-size:12px;
+color:#666;
+text-align:center;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>透析条件シミュレーター</h1>
+
+<div class="input-group">
+<label>性別</label>
+<select id="sex">
+<option value="male">男性</option>
+<option value="female">女性</option>
+</select>
+</div>
+
+<div class="input-group">
+<label>体重 (kg)</label>
+<input type="number" id="weight" value="60">
+</div>
+
+<div class="input-group">
+<label>QB (mL/min)</label>
+<input type="range" min="100" max="350" step="10" value="200" id="qb" class="slider">
+<div class="value-display">QB: <span id="qb_value">200</span></div>
+</div>
+
+<div class="input-group">
+<label>QD (mL/min)</label>
+<input type="range" min="300" max="800" step="50" value="500" id="qd" class="slider">
+<div class="value-display">QD: <span id="qd_value">500</span></div>
+</div>
+
+<div class="input-group">
+<label>透析時間 (時間)</label>
+<input type="number" id="time" value="4">
+</div>
+
+<div class="input-group">
+<label>ダイアライザ</label>
+<select id="dialyzer">
+<option value="700">APS15 (KoA 700)</option>
+<option value="900">APS18 (KoA 900)</option>
+<option value="1100">NV21 (KoA 1100)</option>
+<option value="1200">FB170 (KoA 1200)</option>
+</select>
+</div>
+
+<div class="input-group">
+<label>実測Kt/V（任意）</label>
+<input type="number" step="0.01" id="actual_ktv">
+</div>
+
+<div class="result">
+
+<p>体液量 V : <span id="v">-</span> L</p>
+
+<p>理論クリアランス K : <span id="k">-</span> mL/min</p>
+
+<p><b>予測Kt/V : <span id="ktv">-</span></b></p>
+
+<p>Kt/V評価 : <span id="evaluation">-</span></p>
+
+<p>予測と実測の差 : <span id="difference">-</span></p>
+
+</div>
+
+<div class="disclaimer">
+本ツールは教育・研究用の理論計算です。臨床判断には使用しないでください。
+</div>
+
+</div>
+
+<script>
+
+function calculate(){
+
+let sex=document.getElementById("sex").value;
+let weight=parseFloat(document.getElementById("weight").value);
+let qb=parseFloat(document.getElementById("qb").value);
+let qd=parseFloat(document.getElementById("qd").value);
+let time=parseFloat(document.getElementById("time").value);
+let koa=parseFloat(document.getElementById("dialyzer").value);
+let actual=parseFloat(document.getElementById("actual_ktv").value);
+
+if(!weight || !qb || !qd || !time){
+return;
+}
+
+let V;
+
+if(sex=="male"){
+V=0.6*weight;
+}else{
+V=0.55*weight;
+}
+
+let K=(qb*qd*koa)/((qb*qd)+(koa*(qb+qd)));
+
+let ktv=(K*time*60)/(V*1000);
+
+document.getElementById("v").innerText=V.toFixed(2);
+
+document.getElementById("k").innerText=K.toFixed(1);
+
+document.getElementById("ktv").innerText=ktv.toFixed(2);
+
+let eval_text;
+let eval_class;
+
+if(ktv>=1.2){
+eval_text="達成";
+eval_class="good";
+}else{
+eval_text="不足";
+eval_class="bad";
+}
+
+let eval_element=document.getElementById("evaluation");
+
+eval_element.innerText=eval_text;
+eval_element.className=eval_class;
+
+if(!isNaN(actual)){
+
+let diff=actual-ktv;
+
+document.getElementById("difference").innerText=diff.toFixed(2);
+
+}else{
+
+document.getElementById("difference").innerText="-";
+
+}
+
+}
+
+document.querySelectorAll("input,select").forEach(el=>{
+el.addEventListener("input",calculate);
+});
+
+let qb_slider=document.getElementById("qb");
+let qd_slider=document.getElementById("qd");
+
+qb_slider.oninput=function(){
+document.getElementById("qb_value").innerText=this.value;
+calculate();
+}
+
+qd_slider.oninput=function(){
+document.getElementById("qd_value").innerText=this.value;
+calculate();
+}
+
+calculate();
+
+</script>
+
+</body>
+</html>
