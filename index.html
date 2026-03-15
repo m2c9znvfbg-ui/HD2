@@ -2,64 +2,113 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>HDモード透析シミュレーター（修正版）</title>
+<title>HDモード透析シミュレーター（3本折れ線+おしゃれUI）</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
-h1 { text-align: center; }
-label { display: block; margin-top: 10px; }
-input, select { padding: 5px; margin-top: 5px; width: 150px; }
-.slider-label { display: flex; justify-content: space-between; width: 300px; }
-.result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
-.comment { margin-top: 10px; font-weight: bold; color: red; }
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0; padding: 0;
+  background: #f4f7fa;
+}
+header {
+  text-align: center;
+  padding: 20px;
+  background: #007bff;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 20px;
+  gap: 20px;
+}
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  flex: 1 1 300px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.card h2 {
+  margin-top: 0;
+  font-size: 20px;
+  color: #007bff;
+}
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+input[type=range] {
+  width: 100%;
+}
+.result {
+  margin-top: 15px;
+  padding: 10px;
+  background: #e9f2ff;
+  border-radius: 5px;
+  font-weight: bold;
+}
+canvas {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
 </style>
 </head>
 <body>
-<h1>HDモード透析シミュレーター（修正版）</h1>
+<header>HDモード透析シミュレーター</header>
+<div class="container">
+  <div class="card">
+    <h2>条件設定</h2>
+    <label>ダイアライザ:
+      <select id="dialyzer">
+        <option value="FX-100">FX-100 (HD)</option>
+        <option value="APS-15EA">APS-15EA (HD)</option>
+        <option value="APS-18EA">APS-18EA (HD)</option>
+        <option value="APS-21EA">APS-21EA (HD)</option>
+        <option value="PES-21Sα">PES-21Sα (HD)</option>
+        <option value="PES-25Sα">PES-25Sα (HD)</option>
+        <option value="FB-110uβ">FB-110uβ (HD)</option>
+        <option value="FB-150uβ">FB-150uβ (HD)</option>
+        <option value="FB-210uβ">FB-210uβ (HD)</option>
+        <option value="FB-250uβ">FB-250uβ (HD)</option>
+        <option value="NF-1.6 H12">NF-1.6 H12 (HD)</option>
+      </select>
+    </label>
+    <label>性別:
+      <select id="gender">
+        <option value="male">男性</option>
+        <option value="female">女性</option>
+      </select>
+    </label>
+    <label>体重（kg）:<input type="number" id="weight" value="60"></label>
+    <label>透析時間（h）:<input type="number" id="time" value="4"></label>
+    
+    <div class="slider-label">
+      <span>QB (ml/min)</span><span id="qbValue">200</span>
+    </div>
+    <input type="range" id="qb" min="100" max="400" value="200">
+    
+    <div class="slider-label">
+      <span>QD (ml/min)</span><span id="qdValue">500</span>
+    </div>
+    <input type="range" id="qd" min="200" max="800" value="500">
 
-<label>性別:
-<select id="gender">
-  <option value="male">男性</option>
-  <option value="female">女性</option>
-</select>
-</label>
+    <label>実測 spKt/V:<input type="number" id="spktv" step="0.01" value="1.2"></label>
 
-<label>体重（kg）:<input type="number" id="weight" value="60"></label>
-
-<label>透析時間（h）:<input type="number" id="time" value="4"></label>
-
-<div class="slider-label">
-  <label for="qb">血流量 QB (ml/min)</label>
-  <span id="qbValue">200</span>
+    <div class="result" id="result"></div>
+  </div>
+  
+  <div class="card" style="flex:2 1 500px;">
+    <h2>理論Kt/Vグラフ</h2>
+    <canvas id="ktvChart" height="400"></canvas>
+  </div>
 </div>
-<input type="range" id="qb" min="100" max="400" value="200">
-
-<div class="slider-label">
-  <label for="qd">透析液流量 QD (ml/min)</label>
-  <span id="qdValue">500</span>
-</div>
-<input type="range" id="qd" min="200" max="800" value="500">
-
-<label>ダイアライザ:
-<select id="dialyzer">
-  <option value="FX-100">FX-100 (HD)</option>
-  <option value="APS-15EA">APS-15EA (HD)</option>
-  <option value="APS-18EA">APS-18EA (HD)</option>
-  <option value="APS-21EA">APS-21EA (HD)</option>
-  <option value="PES-21Sα">PES-21Sα (HD)</option>
-  <option value="PES-25Sα">PES-25Sα (HD)</option>
-  <option value="FB-110uβ">FB-110uβ (HD)</option>
-  <option value="FB-150uβ">FB-150uβ (HD)</option>
-  <option value="FB-210uβ">FB-210uβ (HD)</option>
-  <option value="FB-250uβ">FB-250uβ (HD)</option>
-  <option value="NF-1.6 H12">NF-1.6 H12 (HD)</option>
-</select></label>
-
-<label>実測 spKt/V:<input type="number" id="spktv" step="0.01" value="1.2"></label>
-
-<div class="result" id="result"></div>
-
-<canvas id="ktvChart" width="700" height="400"></canvas>
 
 <script>
 const dialyzers = {
@@ -76,62 +125,92 @@ const dialyzers = {
   "NF-1.6 H12": { KoA: 950, type:"高透析量" }
 };
 
-// 折れ線グラフ初期化
+// Chart.js 初期化
 const ctx = document.getElementById('ktvChart').getContext('2d');
 const ktvChart = new Chart(ctx, {
   type: 'line',
   data: {
-    labels: [],
-    datasets: [{
-      label: '理論Kt/V',
-      data: [],
-      borderColor: 'blue',
-      backgroundColor: 'rgba(0,123,255,0.1)',
-      fill: true,
-      tension: 0.3
-    }]
+    labels: [], // 横軸（スライダー値）
+    datasets: [
+      { label:'QB変化', data:[], borderColor:'blue', fill:false, tension:0.3 },
+      { label:'QD変化', data:[], borderColor:'red', fill:false, tension:0.3 },
+      { label:'時間変化', data:[], borderColor:'green', fill:false, tension:0.3 }
+    ]
   },
   options: {
-    scales: { y: { beginAtZero: false }, x: { title: { display: true, text: '計算回数' } } }
+    responsive:true,
+    scales:{
+      x:{ title:{display:true,text:'条件値'} },
+      y:{ title:{display:true,text:'理論Kt/V'}, beginAtZero:false }
+    }
   }
 });
-
-let count = 0;
 
 function calculate() {
   const gender = document.getElementById("gender").value;
   const weight = parseFloat(document.getElementById("weight").value);
-  const time = parseFloat(document.getElementById("time").value);
-  const qb = parseFloat(document.getElementById("qb").value);
-  const qd = parseFloat(document.getElementById("qd").value);
+  const baseTime = parseFloat(document.getElementById("time").value);
+  const baseQB = parseFloat(document.getElementById("qb").value);
+  const baseQD = parseFloat(document.getElementById("qd").value);
   const dialyzerName = document.getElementById("dialyzer").value;
   const spKtV = parseFloat(document.getElementById("spktv").value);
 
-  document.getElementById("qbValue").innerText = qb;
-  document.getElementById("qdValue").innerText = qd;
+  document.getElementById("qbValue").innerText = baseQB;
+  document.getElementById("qdValue").innerText = baseQD;
 
   const V = gender==="male"? 0.6*weight : 0.55*weight;
   const KoA = dialyzers[dialyzerName].KoA;
 
-  const K = (qb * qd * KoA) / (qb*qd + KoA*(qb+qd));
-  // 修正版：時間を分に変換
-  const ktv = K * time * 60 / V / 1000;
+  // QB変化
+  let qbLabels = [], qbData = [];
+  for(let qb=100; qb<=400; qb+=20){
+    const K = (qb * baseQD * KoA)/(qb*baseQD + KoA*(qb+baseQD));
+    const ktv = K * baseTime*60 / V /1000;
+    qbLabels.push(qb);
+    qbData.push(ktv.toFixed(2));
+  }
 
-  const diff = ktv - spKtV;
+  // QD変化
+  let qdLabels = [], qdData = [];
+  for(let qd=200; qd<=800; qd+=30){
+    const K = (baseQB * qd * KoA)/(baseQB*qd + KoA*(baseQB+qd));
+    const ktv = K * baseTime*60 / V /1000;
+    qdLabels.push(qd);
+    qdData.push(ktv.toFixed(2));
+  }
+
+  // 時間変化
+  let timeLabels = [], timeData = [];
+  for(let t=2; t<=6; t+=0.5){
+    const K = (baseQB * baseQD * KoA)/(baseQB*baseQD + KoA*(baseQB+baseQD));
+    const ktv = K * t*60 / V /1000;
+    timeLabels.push(t);
+    timeData.push(ktv.toFixed(2));
+  }
+
+  // データ更新
+  ktvChart.data.datasets[0].data = qbData;
+  ktvChart.data.datasets[0].label = 'QB変化';
+  ktvChart.data.datasets[1].data = qdData;
+  ktvChart.data.datasets[1].label = 'QD変化';
+  ktvChart.data.datasets[2].data = timeData;
+  ktvChart.data.datasets[2].label = '時間変化';
+  ktvChart.data.labels = qbLabels; // 横軸はQBをベースに
+  ktvChart.update();
+
+  // 差分表示（現在条件）
+  const Know = (baseQB*baseQD*KoA)/(baseQB*baseQD + KoA*(baseQB+baseQD));
+  const ktvNow = Know*baseTime*60/V/1000;
+  const diff = ktvNow - spKtV;
 
   document.getElementById("result").innerHTML = `
     <b>ダイアライザ:</b> ${dialyzerName} (${dialyzers[dialyzerName].type})<br>
-    <b>理論Kt/V:</b> ${ktv.toFixed(2)}<br>
+    <b>理論Kt/V:</b> ${ktvNow.toFixed(2)}<br>
     <b>差分 (理論 - spKt/V):</b> ${diff.toFixed(2)}
   `;
-
-  count++;
-  ktvChart.data.labels.push(count);
-  ktvChart.data.datasets[0].data.push(ktv.toFixed(2));
-  ktvChart.update();
 }
 
-// リアルタイム計算
+// リアルタイム更新
 ["qb","qd","gender","weight","time","dialyzer","spktv"].forEach(id=>{
   document.getElementById(id).addEventListener("input", calculate);
   document.getElementById(id).addEventListener("change", calculate);
